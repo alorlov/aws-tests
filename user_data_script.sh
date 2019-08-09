@@ -44,12 +44,12 @@ if [ $VOLUME_ID ]; then
 		cd /home/ubuntu/
 
 		# Get training code
-		git clone https://github.com/awslabs/ec2-spot-labs.git
-		chown -R ubuntu: ec2-spot-labs
-		cd ec2-spot-labs/ec2-spot-deep-learning-training/
+		git clone https://github.com/alorlov/aws-tests.git
+		chown -R ubuntu: aws-tests
+		cd aws-tests/
 
 		# Initiate training using the tensorflow_36 conda environment
-		sudo -H -u ubuntu bash -c "source /home/ubuntu/anaconda3/bin/activate tensorflow_p36; python ec2_spot_keras_training.py"
+		sudo -H -u ubuntu bash -c "source /home/ubuntu/anaconda3/bin/activate tensorflow_p36; python ver1.py"
 fi
 
 # After training, clean up by cancelling spot requests and terminating itself
