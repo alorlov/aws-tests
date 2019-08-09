@@ -1,0 +1,12 @@
+aws iam create-policy \
+    --policy-name ec2-permissions-dl-training  \
+    --policy-document file://ec2-permissions-dl-training.json
+ 
+aws iam attach-role-policy \
+    --policy-arn arn:aws:iam::081921223382:policy/ec2-permissions-dl-training \
+    --role-name DL-Training
+
+aws iam create-instance-profile --instance-profile-name DL-Training-Instance-Profile
+aws iam add-role-to-instance-profile \
+	--instance-profile-name DL-Training-Instance-Profile \
+	--role-name DL-Training
