@@ -4,7 +4,7 @@
   "LaunchSpecifications": [
         {
           "ImageId": "ami-0ddba16a97b1dcda5",
-          "KeyName": "keras-keypair",
+          "KeyName": "keras-keypair2",
           "SecurityGroups": [
               {
                   "GroupId": "sg-00cb73578637361a2"

@@ -161,10 +161,10 @@ def define_model(lstm1_units=32,
 		input_shape=()):
     model = Sequential()
     return_sequences = True if lstm2_units > 0 else False
-    model.add(LSTM(lstm1_units, dropout=lstm1_dropout, input_shape=input_shape, return_sequences=return_sequences))
+    model.add(CuDNNLSTM(lstm1_units, dropout=lstm1_dropout, input_shape=input_shape, return_sequences=return_sequences))
     
     if lstm2_units > 0:
-        model.add(LSTM(lstm2_units, dropout=lstm2_dropout))
+        model.add(CuDNNLSTM(lstm2_units, dropout=lstm2_dropout))
         
     model.add(Dense(1))
     
