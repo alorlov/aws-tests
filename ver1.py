@@ -8,7 +8,7 @@ from __future__ import print_function
 import sys, os, glob, datetime, shutil
 from keras.callbacks import LambdaCallback, Callback, ModelCheckpoint, CSVLogger
 from keras.models import Sequential, load_model
-from keras.layers import LSTM, Dense, Dropout
+from keras.layers import LSTM, CuDNNLSTM, Dense, Dropout
 from keras.optimizers import RMSprop, Adam
 from keras.wrappers.scikit_learn import KerasRegressor
 from keras import metrics
