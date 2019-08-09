@@ -183,10 +183,10 @@ def load_checkpoint_model(checkpoint_path, checkpoint_names):
 # In[20]:
 def main():
 	# Define parameters
-	epochs = 1
-	batch_size = 3200
+	epochs = 100
+	batch_size = 32
 
-	volume_dir = 'dltraining'
+	volume_dir = '/dltraining'
 	filename = 'convert_sber1.csv'
 	train_params = {
 	    'serie_len': 50, 
