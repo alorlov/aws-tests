@@ -5,7 +5,7 @@
 
 
 from __future__ import print_function
-import sys, os, glob, datetime, shutil
+import sys, os, glob, datetime, shutil, traceback
 from keras.callbacks import LambdaCallback, Callback, ModelCheckpoint, CSVLogger
 from keras.models import Sequential, load_model
 from keras.layers import LSTM, CuDNNLSTM, Dense, Dropout
@@ -144,7 +144,7 @@ def define_callbacks(checkpoint_path, checkpoint_names, today_date):
             status_code = requests.get("http://169.254.169.254/latest/meta-data/spot/instance-action").status_code
             if status_code != 404:
                 time.sleep(150)
-    #spot_termination_callback = SpotTermination()
+    spot_termination_callback = SpotTermination()
 
     return [checkpoint_callback, metrics, spot_termination_callback]
 
@@ -194,7 +194,7 @@ def main(volume_dir=''):
 	    'n_train': 25000
 	}
 
-	scheme = 'LSTM32_D05(25K_I29)'
+	scheme = 'LSTM32_D05_64_0(25K_I29)'
 
 	# Prepare data
 	checkpoint_path = os.path.join(volume_dir, 'checkpoints/' + scheme)
