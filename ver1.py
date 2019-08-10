@@ -184,7 +184,7 @@ def load_checkpoint_model(checkpoint_path, checkpoint_names):
 def main(volume_dir=''):
 	# Define parameters
 	epochs = 100
-	batch_size = 32
+	batch_size = 512
 
 	filename = 'convert_sber1.csv'
 	train_params = {
@@ -244,6 +244,7 @@ if __name__ == "__main__":
         main(volume_dir)
         
     except Exception:
+        print(traceback.print_exc())
         today = datetime.datetime.today()
         filename = os.path.join(volume_dir,
                                 'errorlog_{}.log'.format(today.strftime('%Y-%m-%d')))
