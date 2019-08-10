@@ -146,9 +146,7 @@ def define_callbacks(checkpoint_path, checkpoint_names, today_date):
                 time.sleep(150)
     #spot_termination_callback = SpotTermination()
 
-    return [checkpoint_callback, metrics, 
-	#spot_termination_callback
-	]
+    return [checkpoint_callback, metrics, spot_termination_callback]
 
 
 # In[23]:
@@ -181,12 +179,11 @@ def load_checkpoint_model(checkpoint_path, checkpoint_names):
 
 
 # In[20]:
-def main():
+def main(volume_dir=''):
 	# Define parameters
 	epochs = 100
 	batch_size = 32
 
-	volume_dir = '/dltraining'
 	filename = 'convert_sber1.csv'
 	train_params = {
 	    'serie_len': 50, 
@@ -240,6 +237,17 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    volume_dir = '/dltraining'
+    try:
+        main(volume_dir)
+        
+    except Exception:
+        today = datetime.datetime.today()
+        filename = os.path.join(volume_dir,
+                                'errorlog_{}.log'.format(today.strftime('%Y-%m-%d')))
+        with open(filename, 'a') as f:
+            f.write(today.strftime('%Y-%m-%d %H:%M:%S') + ' > ')
+            traceback.print_exc(file=f)
+            f.write('---------\n\n')
 
 
