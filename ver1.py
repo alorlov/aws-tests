@@ -5,7 +5,7 @@
 
 
 from __future__ import print_function
-import sys, os, glob, datetime, shutil, traceback
+import sys, os, glob, datetime, shutil, traceback, requests
 from keras.callbacks import LambdaCallback, Callback, ModelCheckpoint, CSVLogger
 from keras.models import Sequential, load_model
 from keras.layers import LSTM, CuDNNLSTM, Dense, Dropout
@@ -144,6 +144,7 @@ def define_callbacks(checkpoint_path, checkpoint_names, today_date):
             status_code = requests.get("http://169.254.169.254/latest/meta-data/spot/instance-action").status_code
             if status_code != 404:
                 time.sleep(150)
+            pass
     spot_termination_callback = SpotTermination()
 
     return [checkpoint_callback, metrics, spot_termination_callback]
@@ -237,13 +238,66 @@ def main(volume_dir=''):
 
 	# Backup terminal output once training is complete
 	shutil.copy2('/var/log/cloud-init-output.log', os.path.join(volume_dir,
-                                                                'cloud-init-output-{}.log'.format(today_date)))
-
 
 if __name__ == "__main__":
-    volume_dir = '/dltraining'
     try:
-        main(volume_dir)
+        # Define parameters
+        volume_dir = '/dltraining'
+        epochs = 100
+        batch_size = 512
+
+        filename = 'convert_sber1.csv'
+        train_params = {
+            'serie_len': 50, 
+            'serie_y_len': 50, 
+            'sample_step_size': 10,
+            'n_val': 5000,
+            'n_test': 5000,
+            'n_train': 25000
+        }
+
+        scheme = 'LSTM32_D05_64_0__25K_I29_c'
+
+        # Prepare data
+        checkpoint_path = os.path.join(volume_dir, 'checkpoints/' + scheme)
+        checkpoint_names = 'myvols_model.{epoch:03d}.h5'
+        dataset_path = os.path.join(volume_dir, 'datasets')
+        today_date = datetime.datetime.today().strftime('%Y-%m-%d')
+        dataset = load_data(os.path.join(dataset_path, filename))
+        print('dataset.shape', dataset.shape)
+        train_x, train_y, val_x, val_y, test_x, test_y = prepare_data(dataset, train_params)
+        print('train shape', train_x.shape, train_y.shape)
+        print('val shape', val_x.shape, val_y.shape)
+        print('test shape', test_x.shape, test_y.shape)
+
+        # Define callbacks
+        callbacks=define_callbacks(checkpoint_path, checkpoint_names, today_date)
+
+        # Load model
+        if os.path.isdir(checkpoint_path) and any(glob.glob(os.path.join(checkpoint_path, '*'))):
+            model, initial_epoch = load_checkpoint_model(checkpoint_path, checkpoint_names)
+        else:
+            model = define_model(input_shape=(train_params['serie_len'], train_x.shape[2]))
+            initial_epoch = 0
+
+        opt = Adam(lr=0.001)
+        model.compile(loss='mse', optimizer=opt)
+
+        # Train model
+        history = model.fit(train_x, train_y, epochs=epochs, validation_data=(val_x, val_y), 
+                         initial_epoch=initial_epoch, 
+                    batch_size=batch_size,
+                    callbacks=callbacks)
+
+        # Score trained model.
+        test_scores = model.evaluate(test_x, test_y, verbose=1)
+        val_scores = model.evaluate(test_x, test_y, verbose=1)
+        print('Test loss:', test_scores)
+        print('Val loss:', val_scores)
+
+        # Backup terminal output once training is complete
+        shutil.copy2('/var/log/cloud-init-output.log', os.path.join(volume_dir,
+                                                                    'cloud-init-output-{}.log'.format(today_date)))
         
     except Exception:
         print(traceback.print_exc())
