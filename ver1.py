@@ -237,7 +237,7 @@ def main(volume_dir=''):
 	print('Val loss:', val_scores)
 
 	# Backup terminal output once training is complete
-	shutil.copy2('/var/log/cloud-init-output.log', os.path.join(volume_dir,
+	shutil.copy2('/var/log/cloud-init-output.log', os.path.join(volume_dir, 'cloud-init-output-{}.log'.format(today_date)))
 
 if __name__ == "__main__":
     try:
@@ -256,7 +256,7 @@ if __name__ == "__main__":
             'n_train': 25000
         }
 
-        scheme = 'LSTM32_D05_64_0__25K_I29_c'
+        scheme = 'LSTM32_D05_64_0__25K_I29_d'
 
         # Prepare data
         checkpoint_path = os.path.join(volume_dir, 'checkpoints/' + scheme)
