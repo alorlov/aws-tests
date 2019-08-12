@@ -196,7 +196,7 @@ def main(volume_dir=''):
 	    'n_train': 25000
 	}
 
-	scheme = 'LSTM32_D05_64_0(25K_I29)'
+	scheme = 'LSTM32_D05_64_0__25K_I29_b'
 
 	# Prepare data
 	checkpoint_path = os.path.join(volume_dir, 'checkpoints/' + scheme)
@@ -225,7 +225,9 @@ def main(volume_dir=''):
 	
 	# Train model
 	history = model.fit(train_x, train_y, epochs=epochs, validation_data=(val_x, val_y), 
-		             initial_epoch=initial_epoch, batch_size=batch_size)
+		             initial_epoch=initial_epoch, 
+				batch_size=batch_size,
+				callbacks=callbacks)
 
 	# Score trained model.
 	test_scores = model.evaluate(test_x, test_y, verbose=1)

@@ -10,7 +10,7 @@
                   "GroupId": "sg-00cb73578637361a2"
               }
           ],
-          "InstanceType": "p3.2xlarge",
+          "InstanceType": "p2.xlarge",
           "Placement": {
               "AvailabilityZone": "us-west-2a, us-west-2b, us-west-2c, us-west-2d"
           },
