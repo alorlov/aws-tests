@@ -31,8 +31,8 @@ set_random_seed(2)
 
 sys.version
 
-
-# In[19]:
+files = glob.glob('/home/ubuntu')
+is_aws = len(files)
 
 
 def load_data(filename):
@@ -89,11 +89,16 @@ def prepare_data(dataset, train_params):
     
 #     np.random.seed(0)
 #     perm = np.random.permutation(n_train + n_val)
-    data_x, data_y = x, y
+    perm = [0,2,1]
+    data_x = np.array(np.split(x, [45000, 55000]))
+    data_x = np.concatenate(data_x[perm])
+    data_y = np.array(np.split(y, [45000, 55000]))
+    data_y = np.concatenate(data_y[perm])
+    print('samples size', x.shape)
 
-    train_x, train_y = data_x[:n_train], data_y[:n_train]
-    val_x, val_y = data_x[n_train:n_train+n_val], data_y[n_train:n_train+n_val]
-    test_x, test_y = x[-n_test:], y[-n_test:]
+    train_x, train_y = data_x[:-n_val-n_test], data_y[:-n_val-n_test]
+    val_x, val_y = data_x[-n_val-n_test:-n_test], data_y[-n_val-n_test:-n_test]
+    test_x, test_y = data_x[-n_test:], data_y[-n_test:]
     
     return train_x, train_y, val_x, val_y, test_x, test_y
 
@@ -141,30 +146,36 @@ def define_callbacks(checkpoint_path, checkpoint_names, today_date):
     
     class SpotTermination(Callback):
         def on_batch_begin(self, batch, logs={}):
-            status_code = requests.get("http://169.254.169.254/latest/meta-data/spot/instance-action").status_code
-            if status_code != 404:
-                time.sleep(150)
-            pass
+            if is_aws:
+                status_code = requests.get("http://169.254.169.254/latest/meta-data/spot/instance-action").status_code
+                if status_code != 404:
+                    time.sleep(150)
+            
     spot_termination_callback = SpotTermination()
 
     return [checkpoint_callback, metrics, spot_termination_callback]
 
 
 # In[23]:
+def lstm(is_cuda=False, lstm_units=128, input_shape=(), return_sequences=False):
+    if is_cuda:
+        return CuDNNLSTM(lstm_units, input_shape=input_shape, return_sequences=return_sequences)
+    else:
+        return LSTM(lstm_units, input_shape=input_shape, return_sequences=return_sequences)
 
 
 def define_model(lstm1_units=32,
                 lstm1_dropout=0.5,
                 lstm2_units=64,
                 lstm2_dropout=0,
-		input_shape=()):
+                input_shape=()):
     model = Sequential()
     return_sequences = True if lstm2_units > 0 else False
-    model.add(CuDNNLSTM(lstm1_units, input_shape=input_shape, return_sequences=return_sequences))
+    model.add(lstm(is_aws, lstm1_units, input_shape=input_shape, return_sequences=return_sequences))
     model.add(Dropout(lstm1_dropout))
     
     if lstm2_units > 0:
-        model.add(CuDNNLSTM(lstm2_units))
+        model.add(lstm(is_aws, lstm2_units))
         model.add(Dropout(lstm2_dropout))
         
     model.add(Dense(1))
@@ -181,68 +192,12 @@ def load_checkpoint_model(checkpoint_path, checkpoint_names):
     return model, checkpoint_epoch
 
 
-# In[20]:
-def main(volume_dir=''):
-	# Define parameters
-	epochs = 100
-	batch_size = 512
 
-	filename = 'convert_sber1.csv'
-	train_params = {
-	    'serie_len': 50, 
-	    'serie_y_len': 50, 
-	    'sample_step_size': 10,
-	    'n_val': 5000,
-	    'n_test': 5000,
-	    'n_train': 25000
-	}
-
-	scheme = 'LSTM32_D05_64_0__25K_I29_b'
-
-	# Prepare data
-	checkpoint_path = os.path.join(volume_dir, 'checkpoints/' + scheme)
-	checkpoint_names = 'myvols_model.{epoch:03d}.h5'
-	dataset_path = os.path.join(volume_dir, 'datasets')
-	today_date = datetime.datetime.today().strftime('%Y-%m-%d')
-	dataset = load_data(os.path.join(dataset_path, filename))
-	print('dataset.shape', dataset.shape)
-	train_x, train_y, val_x, val_y, test_x, test_y = prepare_data(dataset, train_params)
-	print('train shape', train_x.shape, train_y.shape)
-	print('val shape', val_x.shape, val_y.shape)
-	print('test shape', test_x.shape, test_y.shape)
-	
-	# Define callbacks
-	callbacks=define_callbacks(checkpoint_path, checkpoint_names, today_date)
-
-	# Load model
-	if os.path.isdir(checkpoint_path) and any(glob.glob(os.path.join(checkpoint_path, '*'))):
-	    model, initial_epoch = load_checkpoint_model(checkpoint_path, checkpoint_names)
-	else:
-	    model = define_model(input_shape=(train_params['serie_len'], train_x.shape[2]))
-	    initial_epoch = 0
-	
-	opt = Adam(lr=0.001)
-	model.compile(loss='mse', optimizer=opt)
-	
-	# Train model
-	history = model.fit(train_x, train_y, epochs=epochs, validation_data=(val_x, val_y), 
-		             initial_epoch=initial_epoch, 
-				batch_size=batch_size,
-				callbacks=callbacks)
-
-	# Score trained model.
-	test_scores = model.evaluate(test_x, test_y, verbose=1)
-	val_scores = model.evaluate(test_x, test_y, verbose=1)
-	print('Test loss:', test_scores)
-	print('Val loss:', val_scores)
-
-	# Backup terminal output once training is complete
-	shutil.copy2('/var/log/cloud-init-output.log', os.path.join(volume_dir, 'cloud-init-output-{}.log'.format(today_date)))
-
+# In[19]:
 if __name__ == "__main__":
     try:
         # Define parameters
-        volume_dir = '/dltraining'
+        volume_dir = '/dltraining' if is_aws else 'dltraining'
         epochs = 100
         batch_size = 512
 
@@ -253,10 +208,10 @@ if __name__ == "__main__":
             'sample_step_size': 10,
             'n_val': 5000,
             'n_test': 5000,
-            'n_train': 25000
+            'n_train': 60000
         }
 
-        scheme = 'LSTM32_D05_64_0__25K_I29_d'
+        scheme = 'GAZ'
 
         # Prepare data
         checkpoint_path = os.path.join(volume_dir, 'checkpoints/' + scheme)
@@ -269,6 +224,16 @@ if __name__ == "__main__":
         print('train shape', train_x.shape, train_y.shape)
         print('val shape', val_x.shape, val_y.shape)
         print('test shape', test_x.shape, test_y.shape)
+        # Show data ranges
+        n_train, n_val, n_test = train_x.shape[0], train_params['n_val'], train_params['n_test']
+        plt.plot(np.arange(0, n_train), train_x[:, -1, 3], label='train_price')
+        plt.plot(np.arange(n_train, n_train+n_val), val_x[-n_test:, -1, 3], label='val_price')
+        plt.plot(np.arange(n_train+n_val, n_train+n_val+n_test), test_x[:, -1, 3], label='test_price')
+        plt.legend()
+        plt.show()
+        
+        df = pd.read_csv(os.path.join(volume_dir, 'log_{}.csv'.format(scheme)))
+        df[['loss','val_loss', 'test_loss']].plot()
 
         # Define callbacks
         callbacks=define_callbacks(checkpoint_path, checkpoint_names, today_date)
@@ -308,5 +273,3 @@ if __name__ == "__main__":
             f.write(today.strftime('%Y-%m-%d %H:%M:%S') + ' > ')
             traceback.print_exc(file=f)
             f.write('---------\n\n')
-
-
